@@ -1,0 +1,65 @@
+---
+- name: initial server config
+  hosts: linux, new_servers
+  remote_user: root
+  vars_files:
+    - /home/j4s/auto/cred/ssh_keys.yml
+
+
+  tasks:
+  - name: update all packages
+    dnf:
+      name: "*"
+      state: latest
+  - name: upgrade system
+    command: dnf upgrade -y
+
+  - name: install mandantory packages
+    dnf:
+      name:
+        - epel-release
+        - yum-utils
+        - bash-completion
+        - pip
+      state: latest  
+  - name: install recommended packages
+    dnf:
+      name:
+        - podman
+        - podman-compose
+      state: latest
+
+  - name: ensure python is installed
+    package:
+      name: python3
+      state: present
+  - name: ensure pip is installed
+    package:
+      name: python3-pip
+      state: present   
+  - name: install passlib using pip
+    pip:
+      name: passlib
+      state: present
+      executable: pip3
+
+  - name: create prod user
+    user:
+      name: j4s
+      uid: 1000
+      groups: "wheel"
+      append: yes
+      state: present
+      shell: /bin/bash
+      create_home: yes
+  - name: set prod user pw
+    user:
+      name: j4s
+      password: "{{ ansible_user_password | password_hash('sha512', 'passlib') }}"
+
+  - name: add public key too j4s and root authorized_keys
+    authorized_key:
+      user: root, j4s
+      key: "{{ ssh_public_key }}"
+      
+
