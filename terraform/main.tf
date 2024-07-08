@@ -3,19 +3,26 @@ variable "ci_pw" {
         type =  string
         sensitive = true
 }
-variable "vm_count" {
-    type = number
-    default = 1
+
+variable "depl_name" {
+    type = string
 }
 
 variable "vm_id" {
     type = number
 }
 
+variable "vm_count" {
+    type = number
+    default = 1
+}
+
+
+
 # Create vms
 resource "proxmox_vm_qemu" "j4s_template" {
     count = var.vm_count
-    name = "j4stest${var.vm_id + count.index}"
+    name = "${var.depl_name}${var.vm_id + count.index}"
     target_node = "caesarlab"
     clone = "templateV3"
     full_clone = true
@@ -69,7 +76,7 @@ resource "proxmox_vm_qemu" "j4s_template" {
             host        = "10.10.21.${var.vm_id + count.index}"
         }
         inline = [
-            "sudo hostnamectl set-hostname j4stest${var.vm_id}"
+            "sudo hostnamectl set-hostname ${var.depl_name}${var.vm_id}"
         ]
     }
 
