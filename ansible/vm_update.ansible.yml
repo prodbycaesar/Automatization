@@ -1,0 +1,12 @@
+- name: update and upgrade procedure
+  hosts: linux
+  remote_user: root
+
+  tasks:
+  - name: update all packages
+    dnf:
+      name: "*"
+      state: latest
+      
+  - name: upgrade system
+    command: dnf upgrade -y

@@ -83,7 +83,7 @@ resource "proxmox_vm_qemu" "j4s_template" {
 
     provisioner "local-exec" {
         command = <<EOT
-            ansible-playbook --vault-password-file /home/j4s/auto/cred/.vault_pass --ssh-extra-args='-o StrictHostKeyChecking=no' -i /tmp/new_hosts /home/j4s/auto/ansible/vm_config.ansible.yml
+            ansible-playbook --vault-password-file /home/j4s/auto/cred/.vault_pass --ssh-extra-args='-o StrictHostKeyChecking=no' -i /tmp/new_hosts /home/j4s/auto/ansible/vm_initial_config.ansible.yml
         EOT
     }
 

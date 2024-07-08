@@ -1,0 +1,4 @@
+{
+    "ansible.python.interpreterPath": "/opt/homebrew/bin/python3",
+    "ansible.validation.lint.path": "/Users/julius/.local/pipx/venvs/ansible-lint"
+}
