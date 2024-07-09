@@ -48,7 +48,7 @@ deployment() {
     terrafrom workspace select $depl_name >> $log_dir/$depl_name.log 2>&1
 
     # create new deployment directory and check if creation was successfully
-    mkdir -p "/home/j4s/auto/terraform/depoyments/$depl_name"
+    mkdir -p "$terraform_dir/depoyments/$depl_name"
     if [ $? -eq 0 ]; then
         echo "deployment directory created" >> $log_dir/$depl_name.log 2>&1
     else
@@ -57,7 +57,7 @@ deployment() {
     fi
 
     # create terraform deployment plan in dedicated directory
-    terraform plan --out "/home/j4s/auto/terraform/depoyments/$depl_name/$depl_name.tfplan" -var="vm_count=$vm_count" -var="vm_id=$vm_id" -var="depl_name=$depl_name" >> $log_dir/$depl_name.log 2>&1
+    terraform plan --out "$terraform_dir/depoyments/$depl_name/$depl_name.tfplan" -var="vm_count=$vm_count" -var="vm_id=$vm_id" -var="depl_name=$depl_name" >> $log_dir/$depl_name.log 2>&1
 
     # deployment summarize before execution
     echo "summarize:"
@@ -65,6 +65,7 @@ deployment() {
     echo "deployment id: $vm_id"
     echo "vm count: $vm_count"
     echo ""
+    # terraform execution with check if installation should start
     echo "start installation? (y/n)"
     read start_inst
 
@@ -89,4 +90,38 @@ deletion() {
 
 # bind9 dns config
 dns_config() {
+
+    # loop for multiple deployments
+    for ((i=1; i<=$vm_count; i++))
+    do
+        vm_ip="10.10.21.$vm_id"
+
+        ssh -i raspi << 'EOF'
+            sed -i "\$a \$depl_name            IN      A       \$vm_ip" /bind9/config/db.caesarlab.cc
+            cd /bind9
+            docker-compose restart
+EOF
+        vm_id=$((vm_id + 1))   
+    done
 }
+
+echo "Proxmox Terraform deployment"
+echo "--> install vms (i)"
+echo "--> update vms  (u)"
+echo "--> delete vms  (d)"
+
+read init_selection
+
+case $init_selection in
+    i)
+        deployment
+        dns_config
+        ;;
+    u)
+        upgrade
+        ;;
+    d)
+        #tba
+        ;;
+    *)
+        echo "Invalid selection. Please choose 'i', 'u' or 'd'"
