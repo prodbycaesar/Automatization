@@ -1,0 +1,15 @@
+#!/bin/bash
+
+delete::run() {
+    echo "running new deployment"
+}
+
+delete::description() {
+    echo "Print this help message"
+}
+
+delete::usage() {
+    cat <<EOT
+    -h                   For additional help ;)  
+EOT
+}

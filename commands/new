@@ -1,0 +1,88 @@
+#!/bin/bash
+
+terraform_dir="/home/j4s/auto/terraform"
+ansible_host_dir="/etc/ansible/hosts"
+ansible_playbook="/home/j4s/auto/ansible"
+log_dir="/var/vm_deployment/logs"
+credentials_dir="/home/j4s/auto/cred"
+
+new::run() {
+    echo "initializing new deployment ..."
+
+    local depl_name=$(readopt -n --name)
+    if [ -z "${depl_name}" ]; then
+        echo "ERROR: vm deployment - No name provided with --name"
+        exit 1
+    fi
+
+    local vm_id=$(readopt -i --id)
+    if [ -z "${vm_id}" ]; then
+        echo "ERROR: vm deployment - No id provided with --id"
+        exit 1
+    fi
+
+    local vm_count=$(readopt -c --count)
+    if [ -z "${vm_count}" ]; then
+        echo "ERROR: vm deployment - No count provided with --count"
+        exit 1
+    fi
+
+    terraform workspace new $depl_name >> $log_dir/$depl_name.log 2>&1
+    if [ $? -eq 0 ]; then
+        echo "created workspace" >> $log_dir/$depl_name.log 2>&1
+    else
+        echo "Error: workspace could not be created. please check $depl_name.log."
+        exit 1
+    fi
+
+    # create new deployment directory and check if creation was successfully
+    mkdir -p "$terraform_dir/deployments/"
+    if [ $? -eq 0 ]; then
+        echo "deployment directory created" >> $log_dir/$depl_name.log 2>&1
+    else
+        echo "Error: directory could not be created. please check $depl_name.log."
+        exit 1
+    fi
+
+    # create terraform deployment plan in dedicated directory
+    cd $terraform_dir
+    terraform plan --out "$depl_name.tfplan" -var="vm_count=$vm_count" -var="vm_id=$vm_id" -var="depl_name=$depl_name" >> $log_dir/$depl_name.log 2>&1
+
+    echo "starting vm installation ..."
+    terraform apply "$depl_name.tfplan" >> $log_dir/$depl_name.log 2>&1
+    mv $terraform_dir/$depl_name.tfplan $terraform_dir/deployments
+
+    dns_config
+
+    echo ""
+    echo "Installation done"
+}
+
+new::description() {
+    echo "Deploy one or more new proxmox vms"
+}
+
+new::usage() {
+    cat <<EOT
+    -n --name <name>                    Name of new vms, will be the Proxmox and Hostname
+    -i --id <system id>                 ID of new vms, will be appended to the name for identifying
+    -c --count <amount of new vms>      Amount of new vms to be set up
+EOT
+}
+
+dns_config() {
+    echo "starting dns config ..."
+    for ((i=1; i<=$vm_count; i++))
+    do
+        local vm_ip="10.10.21.$vm_id"
+
+        local vm_ip_config="$depl_name$vm_id         IN     A      $vm_ip"
+
+        ssh raspi << EOF >> $log_dir/$depl_name.log 2>&1
+            echo "$vm_ip_config" >> /bind9/config/db.caesarlab.cc
+            cd /bind9
+            docker-compose restart
+EOF
+        local vm_id=$((vm_id + 1))   
+    done
+}

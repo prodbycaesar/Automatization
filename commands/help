@@ -1,0 +1,15 @@
+#!/bin/bash
+
+help::run() {
+    echo "running new deployment"
+}
+
+help::description() {
+    echo "Print this help message"
+}
+
+help::usage() {
+    cat <<EOT
+    -h                   For additional help ;)  
+EOT
+}
