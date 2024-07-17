@@ -1,5 +1,5 @@
 ---
-- name: initial server config
+- name: initial kubernetes config
   hosts: linux, new_servers
   remote_user: root
 

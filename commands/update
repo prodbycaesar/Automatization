@@ -1,11 +1,14 @@
 #!/bin/bash
 
 update::run() {
-    echo "running new deployment"
+    echo "upgrading systems ..."
+    ansible-playbook --ssh-extra-args='-o StrictHostKeyChecking=no' -i /tmp/new_hosts /home/j4s/auto/ansible/ansible/vm_update_ansible.yml
+    echo "upgrades done"
+
 }
 
 update::description() {
-    echo "Print this help message"
+    echo "Upgrade all available vms "
 }
 
 update::usage() {
