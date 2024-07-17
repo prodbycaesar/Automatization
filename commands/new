@@ -1,14 +1,17 @@
 #!/bin/bash
 
+# directory variables
 terraform_dir="/home/j4s/auto/terraform"
 ansible_host_dir="/etc/ansible/hosts"
 ansible_playbook="/home/j4s/auto/ansible"
 log_dir="/var/vm_deployment/logs"
 credentials_dir="/home/j4s/auto/cred"
 
+# main function to run new deployment
 new::run() {
     echo "initializing new deployment ..."
 
+    # reading mandatory variables with values
     local depl_name=$(readopt -n --name)
     if [ -z "${depl_name}" ]; then
         echo "ERROR: vm deployment - No name provided with --name"
@@ -27,6 +30,7 @@ new::run() {
         exit 1
     fi
 
+    # create terraform workspace
     terraform workspace new $depl_name >> $log_dir/$depl_name.log 2>&1
     if [ $? -eq 0 ]; then
         echo "created workspace" >> $log_dir/$depl_name.log 2>&1
@@ -44,24 +48,29 @@ new::run() {
         exit 1
     fi
 
-    # create terraform deployment plan in dedicated directory
+    # create terraform deployment plan with provided values
     cd $terraform_dir
     terraform plan --out "$depl_name.tfplan" -var="vm_count=$vm_count" -var="vm_id=$vm_id" -var="depl_name=$depl_name" >> $log_dir/$depl_name.log 2>&1
 
+    # start terraform deployment
     echo "starting vm installation ..."
     terraform apply "$depl_name.tfplan" >> $log_dir/$depl_name.log 2>&1
+    # .tfplan will be created in terraform main dir, move it to /deployments
     mv $terraform_dir/$depl_name.tfplan $terraform_dir/deployments
 
+    # executes dns config function
     dns_config
 
     echo ""
     echo "Installation done"
 }
 
+# description for help
 new::description() {
     echo "Deploy one or more new proxmox vms"
 }
 
+# usage of command for help 
 new::usage() {
     cat <<EOT
     -n --name <name>                    Name of new vms, will be the Proxmox and Hostname
@@ -70,19 +79,27 @@ new::usage() {
 EOT
 }
 
+# dns config to add deployments to bind9 dns server on raspberry pi
 dns_config() {
     echo "starting dns config ..."
+
+    # add all vms to dns that have been deployed
     for ((i=1; i<=$vm_count; i++))
     do
+        # variable for vm ip with id identifier
         local vm_ip="10.10.21.$vm_id"
 
+        # naming convention for bind9 config file
         local vm_ip_config="$depl_name$vm_id         IN     A      $vm_ip"
 
+        # connect to raspberry pi
+        # add vm_ip_config var to bind9 config file and restart docker
         ssh raspi << EOF >> $log_dir/$depl_name.log 2>&1
             echo "$vm_ip_config" >> /bind9/config/db.caesarlab.cc
             cd /bind9
             docker-compose restart
 EOF
+        # if multiple vms will be deployed count up the id for uniqueness
         local vm_id=$((vm_id + 1))   
     done
 }

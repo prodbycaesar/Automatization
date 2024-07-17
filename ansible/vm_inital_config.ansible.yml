@@ -67,29 +67,5 @@
       user: j4s
       key: "{{ ssh_public_key }}"
 
-  - name: kubernetes installation
-    shell:
-      cmd: curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-    args:
-      executable: /bin/bash
-  - name: kubernetes autocompletion source
-    shell:
-      cmd: source /usr/share/bash-completion/bash_completion
-    args:
-      executable: /bin/bash
-  - name: kubernetes autocompletion add
-    shell:
-      cmd: kubectl completion bash | sudo tee /etc/bash_completion.d/kubectl > /dev/null
-    args:
-      executable: /bin/bash
-  - name: kubernetes autocompletion config
-    shell:
-      cmd: sudo chmod a+r /etc/bash_completion.d/kubectl
-    args:
-      executable: /bin/bash
-  - name: kubernetes autocompletion source current shell
-    shell:
-      cmd: source ~/.bashrc
-    args:
-      executable: /bin/bash
+
 
