@@ -1,15 +1,70 @@
 #!/bin/bash
 
+# main function to run new deployment
 delete::run() {
-    echo "running new deployment"
+    echo "initializing vm deletion"
+
+    # reading mandatory variables with values
+    local vm_id=$(readopt -i --id)
+    if [ -z "${vm_id}" ]; then
+        echo "ERROR: vm deployment - No id provided with --id"
+        exit 1
+    fi
+
+    local multi_count=$(readopt -m --multiple)
+    if [ -z "${multi_count}" ]; then
+        echo "only one vm will be deleted"
+    fi
+
+    # execute function for deletion in different env's
+    rm_prox
+    rm_ansible
+    rm_dns
+    terraform_refresh
+
+    echo "deletion of vm done"
 }
 
+# description for help
 delete::description() {
-    echo "Print this help message"
+    echo "Delete one or more proxmox vms"
 }
 
+# usage of command for help 
 delete::usage() {
     cat <<EOT
-    -h                   For additional help ;)  
+    -i --id <system id>                    ID of the vm to be deleted
+    -m --multiple <count>                  Delete multiple vms at once 
 EOT
+}
+
+# delete proxmox vm
+rm_prox() {
+    # connect to proxmox
+    # stop and delete vm with provided id
+    ssh prx << EOF
+        qm stop $vm_id
+        qm destroy $vm_id
+EOF
+}
+
+# delete ansible config
+rm_ansible() {
+    # delete vm ip from hosts file
+    sed -i "/10\.10\.21\.$vm_id/d" /etc/ansible/hosts
+}
+
+# delete bind9 dns config
+# delete line with vm ip
+rm_dns() {
+    ssh raspi << EOF
+    sed -i "/10\.10\.21\.$vm_id/d" /bind9/config/db.caesarlab.cc
+    cd /bind9
+    docker-compose restart
+EOF
+}
+
+# refresh state file from terraform
+terraform_refresh() {
+
 }
