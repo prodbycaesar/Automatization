@@ -1,0 +1,18 @@
+- name: initial k3s
+  hosts: linux, new_servers
+  remote_user: root
+
+  tasks:
+    - name: ensure curl is installed
+      dnf:
+        name: curl
+        state: present
+    - name: download k3s install script
+      shell: curl -sfL https://get.k3s.io | sh -
+      args: 
+        executable: /bin/bash
+    - name: ensure k3s is running
+      systemd:
+        name: k3s
+        state: started
+        enabled: yes

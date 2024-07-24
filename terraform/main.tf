@@ -101,7 +101,7 @@ resource "proxmox_vm_qemu" "j4s_template" {
         command = <<EOT
             ansible-playbook --vault-password-file /home/j4s/auto/cred/.vault_pass.txt --ssh-extra-args='-o StrictHostKeyChecking=no' -i /tmp/new_hosts /home/j4s/auto/ansible/vm_inital_config.ansible.yml
             ansible-playbook --ssh-extra-args='-o StrictHostKeyChecking=no' -i /tmp/new_hosts /home/j4s/auto/ansible/kubernetes_initial_config.ansible.yml
-
+            ansible-playbook --ssh-extra-args='-o StrictHostKeyChecking=no' -i /tmp/new_hosts /home/j4s/auto/ansible/k3s_initial_config.ansible.yml
         EOT
     }
     # add servers to permanent ansible host file
