@@ -12,38 +12,53 @@
         path: /etc/fstab
         regexp: '^\s*(\S+)\s+\S+\s+swap\s+(\S+)$'
         replace: '# \1 \2'
+
+    - name: Set SELinux to permissive mode
+      command: setenforce 0
+    - name: Configure SELinux to permissive mode on boot
+      replace:
+        path: /etc/selinux/config
+        regexp: '^SELINUX=enforcing'
+        replace: 'SELINUX=permissive'
+
     - name: Add CRI-O repository
       yum_repository:
-        name: devel_kubic_libcontainers_stable_cri-o
+        name: CRI-O
         description: devel:kubic:libcontainers:stable:cri-o
-        baseurl: https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.24:/1.24.0:/2.0/x86_64/
+        baseurl: https://pkgs.k8s.io/addons:/cri-o:/stable:/v1.30/rpm/
+        gpgcheck: 1
+        enabled: 1
+        gpgkey: https://pkgs.k8s.io/addons:/cri-o:/stable:/v1.30/rpm/repodata/repomd.xml.key
+    - name: Add Kubernetes repository
+      yum_repository:
+        name: kubernetes
+        description: Kubernetes
+        baseurl: https://pkgs.k8s.io/core:/stable:/v1.30/rpm/
         gpgcheck: yes
+        repo_gpgcheck: yes
+        gpgkey: https://pkgs.k8s.io/core:/stable:/v1.30/rpm/repodata/repomd.xml.key
         enabled: yes
-    - name: Install CRI-O
+        exclude: kubelet kubeadm kubectl cri-tools kubernetes-cni
+
+    - name: Package dependicies SELinux
       dnf:
-        name: cri-o
+        name:
+          - container-selinux
+        state: present
+    - name: Install kubeadm, kubelet, kubectl and cri-o
+      dnf:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+          - cri-o
+        disable_excludes: kubernetes
         state: present
     - name: Enable and start CRI-O
       systemd:
         name: crio
         enabled: yes
         state: started
-    - name: Add Kubernetes repository
-      yum_repository:
-        name: kubernetes
-        description: Kubernetes
-        baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
-        gpgcheck: yes
-        repo_gpgcheck: yes
-        gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg,https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-        enabled: yes
-    - name: Install kubeadm, kubelet and kubectl
-      dnf:
-        name:
-          - kubelet
-          - kubeadm
-          - kubectl
-        state: present
     - name: Enable kubelet
       systemd:
         name: kubelet

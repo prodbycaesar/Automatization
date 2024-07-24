@@ -22,7 +22,6 @@
         - yum-utils
         - bash-completion
         - pip
-        - fzf
         - qemu-guest-agent
       state: latest  
   - name: install recommended packages
@@ -30,7 +29,9 @@
       name:
         - podman
         - podman-compose
+        - fzf
       state: latest
+  
 
   - name: ensure python is installed
     package:
