@@ -2,7 +2,7 @@
 
 # main function to run new deployment
 delete::run() {
-    echo "initializing vm deletion"
+    echo "initializing vm deletion ..."
 
     # reading mandatory variables with values
     local vm_id=$(readopt -i --id)
@@ -11,14 +11,11 @@ delete::run() {
         exit 1
     fi
 
-    local multi_count=$(readopt -m --multiple)
-    if [ -z "${multi_count}" ]; then
-        echo "only one vm will be deleted"
-    fi
-
     # get vm name and count
     local prx_name=$(ssh prx "qm config $vm_id | grep '^name:' | sed 's/name: //'")
-    local vm_count=$(ssh prx "qm config $prx_name | grep '^name:' | awk -F '[^0-9]+' '{print $NF}'")
+    local prx_depl=$(ssh prx "qm config $vm_id | grep '^name:' | sed 's/name: //' | sed 's/[0-9]*$//'")
+    local vm_count=$(ssh prx "qm config $vm_id | grep '^name:' | awk -F '[^0-9]+' '{print $NF}'")
+    local terraform_dir="/home/j4s/auto/terraform/"
 
     # execute function for deletion in different env's
     rm_prox
@@ -38,7 +35,6 @@ delete::description() {
 delete::usage() {
     cat <<EOT
     -i --id <system id>                    ID of the vm to be deleted
-    -m --multiple <count>                  Delete multiple vms at once 
 EOT
 }
 
@@ -55,14 +51,14 @@ EOF
 # delete ansible config
 rm_ansible() {
     # delete vm ip from hosts file
-    sed -i "/10\.10\.21\.$vm_id/d" /etc/ansible/hosts
+    sed -i "/10\.10\.21\.$vm_count/d" /etc/ansible/hosts
 }
 
 # delete bind9 dns config
 # delete line with vm ip
 rm_dns() {
     ssh raspi << EOF
-    sed -i "/10\.10\.21\.$vm_id/d" /bind9/config/db.caesarlab.cc
+    sed -i "/10\.10\.21\.$vm_count/d" /bind9/config/db.caesarlab.cc
     cd /bind9
     docker-compose restart
 EOF
@@ -70,11 +66,10 @@ EOF
 
 # refresh state file from terraform
 terraform_refresh() {
-    local terraform_dir="/home/j4s/auto/terraform/deployments"
-
+    
     cd $terraform_dir
-    terraform workspace select $prx_name
-    terraform state rm "proxmox_vm_qemu.j4s_template[${vm_count}]"
+    #terraform workspace select $prx_depl
+    terraform state rm "proxmox_vm_qemu.j4s_template[${vm_count -1}]"
     terraform plan
     terraform apply
 }

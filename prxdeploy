@@ -41,6 +41,7 @@ run() {
     # loading command script into main script to execute
     source "$cmd_dir/$command"
     eval "${command}::run"
+}
 
 # function for displaying the help option
 display_help() {

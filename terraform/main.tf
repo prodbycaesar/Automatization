@@ -92,8 +92,7 @@ resource "proxmox_vm_qemu" "j4s_template" {
     # add server to tmp serverfile for deployment
     provisioner "local-exec" {
         command = <<EOT
-            echo "[new_servers]" > /tmp/new_hosts
-            echo "10.10.21.${var.vm_id + count.index}" >> /tmp/new_hosts
+            echo -e "[new_servers]\n10.10.21.${var.vm_id + count.index}" > /tmp/new_hosts
         EOT
     }
     
@@ -101,7 +100,7 @@ resource "proxmox_vm_qemu" "j4s_template" {
     provisioner "local-exec" {
         command = <<EOT
             ansible-playbook --vault-password-file /home/j4s/auto/cred/.vault_pass.txt --ssh-extra-args='-o StrictHostKeyChecking=no' -i /tmp/new_hosts /home/j4s/auto/ansible/vm_inital_config.ansible.yml
-            ansible-playbook --ssh-extra-args='-o StrictHostKeyChecking=no' -i /tmp/new_hosts /home/j4s/auto/ansible/ansible/kubernetes_initial_config.ansible.yml
+            ansible-playbook --ssh-extra-args='-o StrictHostKeyChecking=no' -i /tmp/new_hosts /home/j4s/auto/ansible/kubernetes_initial_config.ansible.yml
 
         EOT
     }
