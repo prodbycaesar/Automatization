@@ -4,28 +4,48 @@
   remote_user: root
 
   tasks:
-  - name: kubernetes installation
-    shell:
-      cmd: curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-    args:
-      executable: /bin/bash
-  - name: kubernetes autocompletion source
-    shell:
-      cmd: source /usr/share/bash-completion/bash_completion
-    args:
-      executable: /bin/bash
-  - name: kubernetes autocompletion add
-    shell:
-      cmd: kubectl completion bash | sudo tee /etc/bash_completion.d/kubectl > /dev/null
-    args:
-      executable: /bin/bash
-  - name: kubernetes autocompletion config
-    shell:
-      cmd: sudo chmod a+r /etc/bash_completion.d/kubectl
-    args:
-      executable: /bin/bash
-  - name: kubernetes autocompletion source current shell
-    shell:
-      cmd: source ~/.bashrc
-    args:
-      executable: /bin/bash
+    - name: Disable swap
+      command: swapoff -a
+      become: yes
+    - name: Comment out swap in fstab
+      replace:
+        path: /etc/fstab
+        regexp: '^\s*(\S+)\s+\S+\s+swap\s+(\S+)$'
+        replace: '# \1 \2'
+    - name: Add CRI-O repository
+      yum_repository:
+        name: devel_kubic_libcontainers_stable_cri-o
+        description: devel:kubic:libcontainers:stable:cri-o
+        baseurl: https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.24:/1.24.0:/2.0/x86_64/
+        gpgcheck: yes
+        enabled: yes
+    - name: Install CRI-O
+      dnf:
+        name: cri-o
+        state: present
+    - name: Enable and start CRI-O
+      systemd:
+        name: crio
+        enabled: yes
+        state: started
+    - name: Add Kubernetes repository
+      yum_repository:
+        name: kubernetes
+        description: Kubernetes
+        baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+        gpgcheck: yes
+        repo_gpgcheck: yes
+        gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg,https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+        enabled: yes
+    - name: Install kubeadm, kubelet and kubectl
+      dnf:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+    - name: Enable kubelet
+      systemd:
+        name: kubelet
+        enabled: yes
+    

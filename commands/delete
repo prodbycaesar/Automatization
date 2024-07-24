@@ -19,7 +19,7 @@ delete::run() {
     local prx_name=$(ssh prx "qm config $vm_id | grep '^name:' | sed 's/name: //'") >/dev/null 2>&1
     local prx_depl=$(echo $prx_name | sed 's/name: //' | sed 's/[0-9]*$//')
     local real_count=$(echo $prx_name | awk -F '[^0-9]+' '{print $NF}')
-
+    local vm_count=$(($real_count -1))
     # execute function for deletion in different env's
     rm_prox
     rm_ansible
@@ -85,6 +85,6 @@ terraform_refresh() {
         read -p "choose right index to delete: " var_index
         terraform state rm "proxmox_vm_qemu.j4s_template[$var_index]"
     else
-        terraform state rm "proxmox_vm_qemu.j4s_template[0]"
+        terraform state rm "proxmox_vm_qemu.j4s_template[$vm_count]"
     fi
 }

@@ -23,6 +23,7 @@
         - bash-completion
         - pip
         - fzf
+        - qemu-guest-agent
       state: latest  
   - name: install recommended packages
     dnf:
