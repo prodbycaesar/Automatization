@@ -4,6 +4,10 @@
 delete::run() {
     echo "initializing vm deletion ..."
 
+    # path variables
+    local terraform_dir="/home/j4s/auto/terraform/"
+    local log_dir="/var/vm_deployment/logs"
+
     # reading mandatory variables with values
     local vm_id=$(readopt -i --id)
     if [ -z "${vm_id}" ]; then
@@ -11,11 +15,10 @@ delete::run() {
         exit 1
     fi
 
-    # get vm name and count
-    local prx_name=$(ssh prx "qm config $vm_id | grep '^name:' | sed 's/name: //'")
-    local prx_depl=$(ssh prx "qm config $vm_id | grep '^name:' | sed 's/name: //' | sed 's/[0-9]*$//'")
-    local vm_count=$(ssh prx "qm config $vm_id | grep '^name:' | awk -F '[^0-9]+' '{print $NF}'")
-    local terraform_dir="/home/j4s/auto/terraform/"
+    # variables for vm name and id convention (for single deployments only)
+    local prx_name=$(ssh prx "qm config $vm_id | grep '^name:' | sed 's/name: //'") >/dev/null 2>&1
+    local prx_depl=$(echo $prx_name | sed 's/name: //' | sed 's/[0-9]*$//')
+    local real_count=$(echo $prx_name | awk -F '[^0-9]+' '{print $NF}')
 
     # execute function for deletion in different env's
     rm_prox
@@ -42,7 +45,7 @@ EOT
 rm_prox() {
     # connect to proxmox
     # stop and delete vm with provided id
-    ssh prx << EOF
+    ssh prx << EOF >/dev/null 2>&1
         qm stop $vm_id
         qm destroy $vm_id
 EOF
@@ -51,14 +54,14 @@ EOF
 # delete ansible config
 rm_ansible() {
     # delete vm ip from hosts file
-    sed -i "/10\.10\.21\.$vm_count/d" /etc/ansible/hosts
+    sed -i "/10\.10\.21\.$real_count/d" /etc/ansible/hosts
 }
 
 # delete bind9 dns config
 # delete line with vm ip
 rm_dns() {
-    ssh raspi << EOF
-    sed -i "/10\.10\.21\.$vm_count/d" /bind9/config/db.caesarlab.cc
+    ssh raspi << EOF >/dev/null 2>&1
+    sed -i "/10\.10\.21\.$real_count/d" /bind9/config/db.caesarlab.cc
     cd /bind9
     docker-compose restart
 EOF
@@ -67,9 +70,21 @@ EOF
 # refresh state file from terraform
 terraform_refresh() {
     
+    # choose right terraform workspace
     cd $terraform_dir
-    #terraform workspace select $prx_depl
-    terraform state rm "proxmox_vm_qemu.j4s_template[${vm_count -1}]"
-    terraform plan
-    terraform apply
+    terraform workspace select $prx_depl || terraform workspace select default
+
+    # change dir to state file
+    cd $terraform_dir/terraform.tfstate.d/$prx_depl
+
+    # line count fuer multiple vm deployments
+    local line_count=$(terraform state list | wc -l)
+
+    # when more than one line (more deployments in one workspace) manually choose the vm to delete
+    if [ "$line_count" -gt 1 ]; then
+        read -p "choose right index to delete: " var_index
+        terraform state rm "proxmox_vm_qemu.j4s_template[$var_index]"
+    else
+        terraform state rm "proxmox_vm_qemu.j4s_template[0]"
+    fi
 }

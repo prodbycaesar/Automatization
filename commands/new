@@ -31,7 +31,8 @@ new::run() {
     fi
 
     # create terraform workspace
-    terraform workspace new $depl_name >> $log_dir/$depl_name.log 2>&1
+    cd $terraform_dir
+    terraform workspace new $depl_name || terraform workspace select $depl_name
     if [ $? -eq 0 ]; then
         echo "created workspace" >> $log_dir/$depl_name.log 2>&1
     else
@@ -39,24 +40,13 @@ new::run() {
         exit 1
     fi
 
-    # create new deployment directory and check if creation was successfully
-    mkdir -p "$terraform_dir/deployments/"
-    if [ $? -eq 0 ]; then
-        echo "deployment directory created" >> $log_dir/$depl_name.log 2>&1
-    else
-        echo "Error: directory could not be created. please check $depl_name.log."
-        exit 1
-    fi
-
     # create terraform deployment plan with provided values
-    cd $terraform_dir
     terraform plan --out "$depl_name.tfplan" -var="vm_count=$vm_count" -var="vm_id=$vm_id" -var="depl_name=$depl_name" >> $log_dir/$depl_name.log 2>&1
 
     # start terraform deployment
     echo "starting vm installation ..."
-    terraform apply "$depl_name.tfplan" >> $log_dir/$depl_name.log 2>&1
+    terraform apply "$depl_name.tfplan"
     # .tfplan will be created in terraform main dir, move it to /deployments
-    mv $terraform_dir/$depl_name.tfplan $terraform_dir/deployments
 
     # executes dns config function
     dns_config

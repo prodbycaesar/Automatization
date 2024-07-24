@@ -22,6 +22,7 @@
         - yum-utils
         - bash-completion
         - pip
+        - fzf
       state: latest  
   - name: install recommended packages
     dnf:
