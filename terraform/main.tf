@@ -84,7 +84,7 @@ resource "proxmox_vm_qemu" "j4s_template" {
         }
         # set vm static hostname
         inline = [
-            "sudo hostnamectl set-hostname ${var.depl_name}${var.vm_id}"
+            "sudo hostnamectl set-hostname ${var.depl_name}${var.vm_id + count.index}"
         ]
     }
 
@@ -92,7 +92,7 @@ resource "proxmox_vm_qemu" "j4s_template" {
     # add server to tmp serverfile for deployment
     provisioner "local-exec" {
         command = <<EOT
-            echo -e "[new_servers]\n10.10.21.${var.vm_id + count.index}" > /tmp/new_hosts
+            echo -e "10.10.21.${var.vm_id + count.index}" >> /tmp/new_hosts
         EOT
     }
     

@@ -30,9 +30,19 @@ new::run() {
         exit 1
     fi
 
-    # create terraform workspace
+    # temp ansible file
+    if [ -f "/tmp/new_hosts" ]; then
+        sed -i '2,$d' "/tmp/new/hosts"
+    else
+        echo "[new_servers]" > "/tmp/new_hosts"
+
+    # create unique terraform workspace
     cd $terraform_dir
-    terraform workspace new $depl_name || terraform workspace select $depl_name
+    
+    local random_num=$(printf "%05d" $((RANDOM % 100000)))
+    local ws_name="${depl_name}_${random_num}"
+
+    terraform workspace new $ws_name || echo "workspace already existing" && exit 1
     if [ $? -eq 0 ]; then
         echo "created workspace" >> $log_dir/$depl_name.log 2>&1
     else
